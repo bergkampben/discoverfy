@@ -1,0 +1,10 @@
+README.md
+discoverfy/__init__.py
+discoverfy/config.py
+discoverfy/model.py
+discoverfy/util.py
+discoverfy.egg-info/PKG-INFO
+discoverfy.egg-info/SOURCES.txt
+discoverfy.egg-info/dependency_links.txt
+discoverfy.egg-info/requires.txt
+discoverfy.egg-info/top_level.txt
