@@ -1,17 +1,21 @@
 # eecs-441-project
 
-*Setting up your environment*
+_Setting up your environment_
 
-`deactivate  # Make sure no old virtual env is active`
-`python3 -m venv env`
-`source env/bin/activate`
-`pip install --upgrade pip setuptools wheel`
-`pip install nodeenv`
-`nodeenv --python-virtualenv`
-`deactivate`
-`source env/bin/activate`
+```
+deactivate  # Make sure no old virtual env is active
+python3 -m venv env
+source env/bin/activate
+pip install --upgrade pip setuptools wheel
+pip install nodeenv
+nodeenv --python-virtualenv
+deactivate
+source env/bin/activate
+```
 
-*Install back end and front end*
+_Install back end and front end_
 
-`pip install -e .`
-`npm install .`
+```
+pip install -e .
+npm install .
+```
