@@ -10,7 +10,6 @@
 `nodeenv --python-virtualenv`
 `deactivate`
 `source env/bin/activate`
-```
 
 *Install back end and front end*
 
