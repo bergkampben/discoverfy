@@ -47,15 +47,17 @@ auth_query_parameters = {
 }
 
 
-@discoverfy.app.route('/')
+@discoverfy.app.route('/', methods=["GET", "POST"])
 def show_index():
     """Display / route."""
     # Auth Step 1: Authorization
-    url_args = ''
-    for key, val in auth_query_parameters.items():
-        url_args += '{}={}&'.format(key, val)
-    auth_url = "{}?{}".format(SPOTIFY_AUTH_URL, url_args)
-    return redirect(auth_url)
+    if request.method == 'POST':
+        url_args = ''
+        for key, val in auth_query_parameters.items():
+            url_args += '{}={}&'.format(key, val)
+        auth_url = "{}?{}".format(SPOTIFY_AUTH_URL, url_args)
+        return redirect(auth_url)
+    return render_template('index.html')
 
 
 @discoverfy.app.route("/callback")
