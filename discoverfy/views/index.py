@@ -83,7 +83,7 @@ def callback():
     profile_data = json.loads(profile_response.text)
 
     # Get user playlist data
-    playlist_api_endpoint = '{}/playlists'.format(profile_data['href'])
+    playlist_api_endpoint = '{}/playlists/'.format(profile_data['href'])
     playlists_response = requests.get(playlist_api_endpoint, headers=authorization_header)
     playlist_data = json.loads(playlists_response.text)
 
@@ -113,7 +113,7 @@ def save_playlist(access_token, user_id):
 
     # Create new playlist
     playlist_api_endpoint = '{}/users/{}/playlists'.format(SPOTIFY_API_URL, user_id)
-    playlist_response = requests.post(playlist_api_endpoint, data=post_body, headers=headers)
+    playlist_response = requests.post(playlist_api_endpoint, data=json.dumps(post_body), headers=headers)
     profile_data = json.loads(playlist_response.text)
 
     print(playlist_api_endpoint)
