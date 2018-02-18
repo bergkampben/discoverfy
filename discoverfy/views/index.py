@@ -11,7 +11,11 @@ import requests
 import base64
 import urllib
 import discoverfy
-
+import sqlite3
+import atexit
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+import apscheduler
 
 #  Client Keys
 CLIENT_ID = '15b472bff56a463781420db9f55bcf7d'
@@ -37,6 +41,38 @@ auth_query_parameters = {
     'scope': SCOPE,
     'client_id': CLIENT_ID
 }
+
+def weekly_task():
+    with discoverfy.app.app_context():
+    #add_user_to_db('wef','12e2')
+        database = discoverfy.model.get_db()
+        cursor = database.cursor()
+        cursor.execute('''
+                   SELECT *
+                   FROM users
+                   ''')
+        result = cursor.fetchall()
+
+        # Weekly work for each user
+        for i in result:
+            print(i)
+
+            # Get new access token using refresh token
+
+            # Create new playlist for user (do_the_thing)
+
+    print ("debug")
+
+scheduler = BackgroundScheduler()
+scheduler.start()
+scheduler.add_job(
+    func=weekly_task,
+    trigger=IntervalTrigger(seconds=5),
+    id='main_task',
+    name='weekly_task',
+    replace_existing=True)
+# Shut down the scheduler when exiting the app
+atexit.register(lambda: scheduler.shutdown())
 
 
 @discoverfy.app.route('/', methods=['GET', 'POST'])
@@ -99,11 +135,13 @@ def callback():
     playlists_response = requests.get(playlist_api_endpoint, headers=authorization_header)
     playlist_data = json.loads(playlists_response.text)
 
-    # Check if user already exists (don't create new playlist if they do)
-    session['username'] = profile_data['id']
-
-    # Save Discover Weekly playlist
-    do_the_thing(playlist_data, access_token, profile_data['id'])
+    # Add user to database
+    try:
+        add_user_to_db(profile_data['id'], refresh_token)
+        # Save Discover Weekly playlist
+        do_the_thing(access_token, profile_data['id'])
+    except(sqlite3.IntegrityError) as e:
+        print(e)
 
     return redirect(url_for('show_user', user_id=profile_data['id']))
 
