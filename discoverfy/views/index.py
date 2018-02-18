@@ -24,7 +24,6 @@ SPOTIFY_API_BASE_URL = 'https://api.spotify.com'
 API_VERSION = 'v1'
 SPOTIFY_API_URL = '{}/{}'.format(SPOTIFY_API_BASE_URL, API_VERSION)
 
-
 # Server-side Parameters
 CLIENT_SIDE_URL = 'http://localhost'
 PORT = 8000
@@ -50,6 +49,17 @@ def show_index():
         auth_url = '{}?{}'.format(SPOTIFY_AUTH_URL, url_args)
         return redirect(auth_url)
     return render_template('index.html')
+
+
+def add_user_to_db(user_id, refresh_token):
+    database = discoverfy.model.get_db()
+    cursor = database.cursor()
+    """Add new user to database."""
+    cursor.execute('''
+                   INSERT INTO users(user_id, refresh_token)
+                   VALUES("{}",
+                          "{}")
+                   '''.format(user_id, refresh_token))
 
 
 @discoverfy.app.route('/callback/')
@@ -113,10 +123,5 @@ def save_playlist(access_token, user_id):
 
     # Create new playlist
     playlist_api_endpoint = '{}/users/{}/playlists'.format(SPOTIFY_API_URL, user_id)
-    playlist_response = requests.post(playlist_api_endpoint, data=json.dumps(post_body), headers=headers)
-    profile_data = json.loads(playlist_response.text)
-
-    print(playlist_api_endpoint)
-    print(headers)
-    print(post_body)
-    print(profile_data)
+    playlist_response_string = requests.post(playlist_api_endpoint, data=json.dumps(post_body), headers=headers)
+    playlist_response_json = json.loads(playlist_response.text)
