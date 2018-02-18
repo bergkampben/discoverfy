@@ -15,6 +15,7 @@ setup(
         'pylint==1.8.1',
         'nodeenv==1.2.0',
         'sh==1.12.14',
-        'requests==2.18.4'
+        'requests==2.18.4',
+        'apscheduler'
     ],
 )
