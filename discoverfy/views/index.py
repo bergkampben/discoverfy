@@ -6,7 +6,7 @@ URLs include:
 """
 import json
 import flask
-from flask import Flask, request, redirect, render_template, url_for
+from flask import Flask, request, redirect, render_template, url_for, session
 import requests
 import base64
 import urllib
@@ -42,7 +42,9 @@ auth_query_parameters = {
 @discoverfy.app.route('/', methods=['GET', 'POST'])
 def show_index():
     """Display / route."""
-    if request.method == 'POST':
+    if 'username' in session:
+        return redirect(url_for('show_user', user_id=session['username']))
+    elif request.method == 'POST':
         url_args = ''
         for key, val in auth_query_parameters.items():
             url_args += '{}={}&'.format(key, val)
@@ -97,8 +99,11 @@ def callback():
     playlists_response = requests.get(playlist_api_endpoint, headers=authorization_header)
     playlist_data = json.loads(playlists_response.text)
 
+    # Check if user already exists (don't create new playlist if they do)
+    session['username'] = profile_data['id']
+
     # Save Discover Weekly playlist
-    save_playlist(access_token, profile_data['id'])
+    do_the_thing(playlist_data, access_token, profile_data['id'])
 
     return redirect(url_for('show_user', user_id=profile_data['id']))
 
@@ -109,7 +114,7 @@ def show_user(user_id):
     return render_template('user.html', user=user_id)
 
 
-def save_playlist(access_token, user_id):
+def do_the_thing(playlist_data, access_token, user_id):
     """Save the user's Discover Weekly playlist"""
     post_body = {
         'name': 'Discoverfy',
@@ -121,7 +126,41 @@ def save_playlist(access_token, user_id):
         'Authorization':'Bearer {}'.format(access_token)
     }
 
-    # Create new playlist
+    discover_weekly_tracks_link = ''
+    discover_weekly_found = False
+    while not discover_weekly_found:
+        for playlist in playlist_data['items']:
+            if playlist['name'] == 'Discover Weekly' and playlist['owner']['id'] == 'spotify':
+                discover_weekly_tracks_link = playlist['tracks']['href']
+                discover_weekly_found = True
+                break
+
+        if playlist_data['next']:
+            next_playlist_link = playlist_data['next']
+            playlists_response = requests.get(next_playlist_link, headers=headers)
+            playlist_data = json.loads(playlists_response.text)
+
+
+    tracks_response = requests.get(discover_weekly_tracks_link, headers=headers)
+    tracks_data = json.loads(tracks_response.text)
+
+    track_uris = []
+    for track in tracks_data['items']:
+        track_uris.append(track['track']['uri'])
+
+    # Get current Discover Weekly tracks
+    # tracks_api_endpoint = '{}/users/{}/playlists/{}/tracks'.format(SPOTIFY_API_URL, user_id, playlist_id)
+
+    # Save tracks to a new playlist
     playlist_api_endpoint = '{}/users/{}/playlists'.format(SPOTIFY_API_URL, user_id)
-    playlist_response_string = requests.post(playlist_api_endpoint, data=json.dumps(post_body), headers=headers)
-    playlist_response_json = json.loads(playlist_response.text)
+    playlist_response = requests.post(playlist_api_endpoint, data=json.dumps(post_body), headers=headers)
+    playlist_data = json.loads(playlist_response.text)
+
+    new_playlist_id = playlist_data['id']
+
+    post_body = {
+        'uris': track_uris
+    }
+
+    playlist_tracks_api_endpoint = '{}/users/{}/playlists/{}/tracks'.format(SPOTIFY_API_URL, user_id, new_playlist_id)
+    playlist_response = requests.post(playlist_tracks_api_endpoint, data=json.dumps(post_body), headers=headers)
