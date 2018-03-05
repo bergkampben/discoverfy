@@ -16,6 +16,7 @@ import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 import apscheduler
+import os
 
 #  Client Keys
 CLIENT_ID = '15b472bff56a463781420db9f55bcf7d'
@@ -34,7 +35,6 @@ PORT = 8000
 REDIRECT_URI = '{}:{}/callback'.format(CLIENT_SIDE_URL, PORT)
 SCOPE = 'playlist-modify-public playlist-modify-private playlist-read-private user-top-read'
 
-
 auth_query_parameters = {
     'response_type': 'code',
     'redirect_uri': REDIRECT_URI,
@@ -44,22 +44,63 @@ auth_query_parameters = {
 
 def weekly_task():
     with discoverfy.app.app_context():
-    #add_user_to_db('wef','12e2')
-        database = discoverfy.model.get_db()
-        cursor = database.cursor()
-        cursor.execute('''
-                   SELECT *
-                   FROM users
-                   ''')
-        result = cursor.fetchall()
+        if not discoverfy.app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true": #for demo, to prevent scheduler from running twice every IntervalTrigger in debug mode
+            database = discoverfy.model.get_db()
+            cursor = database.cursor()
+            cursor.execute('''
+                       SELECT *
+                       FROM users
+                       ''')
+            result = cursor.fetchall()
 
-        # Weekly work for each user
-        for i in result:
-            print(i)
+            # Weekly work for each user
+            for i in result:
+                print(i)
 
-            # Get new access token using refresh token
+                # Get new access token using refresh token
+                refresh_token = i['refresh_token']
+                print("REFRESH TOKEN")
+                print(refresh_token)
+                code_payload = {
+                    'grant_type': 'refresh_token',
+                    'refresh_token': str(refresh_token),
+                    'redirect_uri': REDIRECT_URI,
+                    'client_id' : CLIENT_ID, # ALTERNATIVE METHOD
+                    'client_secret' : CLIENT_SECRET # ALTERNATIVE METHOD
+                }
+                headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+                post_request = requests.post(SPOTIFY_TOKEN_URL, data=code_payload, headers=headers)
 
-            # Create new playlist for user (do_the_thing)
+                #TODO If request fails due to revoked access, remove user from database
+
+                # Tokens are Returned to Application
+                response_data = json.loads(post_request.text)
+                print(response_data)
+                access_token = response_data['access_token']
+                # refresh_token = response_data['refresh_token']
+                # no refresh token returned, however initial refresh token should be valid until access revoked (?)
+                token_type = response_data['token_type']
+                expires_in = response_data['expires_in']
+
+                # Use the access token to access Spotify API
+                authorization_header = {'Authorization':'Bearer {}'.format(access_token)}
+
+                # Get profile data
+                user_profile_api_endpoint = '{}/me/'.format(SPOTIFY_API_URL)
+                profile_response = requests.get(user_profile_api_endpoint, headers=authorization_header)
+                profile_data = json.loads(profile_response.text)
+
+                # Get user playlist data
+                playlist_api_endpoint = '{}/playlists/'.format(profile_data['href'])
+                playlists_response = requests.get(playlist_api_endpoint, headers=authorization_header)
+                playlist_data = json.loads(playlists_response.text)
+
+
+                # Create new playlist for user (do_the_thing)
+
+                do_the_thing(playlist_data, access_token, profile_data['id'])
+
+                # Update database with new refresh token (API manual says new refresh token may be returned)
 
     print ("debug")
 
@@ -67,7 +108,7 @@ scheduler = BackgroundScheduler()
 scheduler.start()
 scheduler.add_job(
     func=weekly_task,
-    trigger=IntervalTrigger(seconds=5),
+    trigger=IntervalTrigger(seconds=10),
     id='main_task',
     name='weekly_task',
     replace_existing=True)
@@ -98,6 +139,7 @@ def add_user_to_db(user_id, refresh_token):
                    VALUES("{}",
                           "{}")
                    '''.format(user_id, refresh_token))
+    print("END OF add_user_to_db")
 
 
 @discoverfy.app.route('/callback/')
@@ -139,7 +181,7 @@ def callback():
     try:
         add_user_to_db(profile_data['id'], refresh_token)
         # Save Discover Weekly playlist
-        do_the_thing(access_token, profile_data['id'])
+        do_the_thing(playlist_data, access_token, profile_data['id'])
     except(sqlite3.IntegrityError) as e:
         print(e)
 
