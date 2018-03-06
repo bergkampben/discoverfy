@@ -11,6 +11,7 @@ import requests
 import base64
 import urllib
 import discoverfy
+import arrow
 import sqlite3
 import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -196,8 +197,9 @@ def show_user(user_id):
 
 def do_the_thing(playlist_data, access_token, user_id):
     """Save the user's Discover Weekly playlist"""
+    playlist_name = 'Discoverfy ({})'.format(arrow.utcnow().format('MM-DD-YYYY HH:mm:ss'))
     post_body = {
-        'name': 'Discoverfy',
+        'name': playlist_name,
         'public': False
     }
 
