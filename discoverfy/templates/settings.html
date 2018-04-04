@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Discoverfy</title>
+    <link rel="stylesheet" href="/static/css/discoverfy.css">
+  </head>
+
+  <body>
+    <h1>Settings</h1>
+    <h1>Organization Type
+      <form action="" method="post" enctype="multipart/form-data">
+          <select>
+            <option value="weekly">Weekly Playlists (saves a new playlist each week)</option>
+            <option value="global">Global Playlist (saves all tracks into a single playlist)</option>
+            <option value="hybrid">Hybrid (saves playlist for a configurable number of weeks, then adds to global playlist)</option>
+            <option value="genre">Genrefied Playlists (global playlists classified by root genre)</option>
+          </select>
+          <h1>Playlist Expiration Time (Hybrid Option Only)</h1>
+          <select>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+          </select>
+          <br><br><input type="submit" name="save-settings" value="Save"/><br>
+      </form>
+      </h1>
+  </body>
+</html>

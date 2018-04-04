@@ -109,7 +109,7 @@ scheduler = BackgroundScheduler()
 scheduler.start()
 scheduler.add_job(
     func=weekly_task,
-    trigger=IntervalTrigger(seconds=10),
+    trigger=IntervalTrigger(weeks=1),
     id='main_task',
     name='weekly_task',
     replace_existing=True)
@@ -246,3 +246,8 @@ def do_the_thing(playlist_data, access_token, user_id):
 
     playlist_tracks_api_endpoint = '{}/users/{}/playlists/{}/tracks'.format(SPOTIFY_API_URL, user_id, new_playlist_id)
     playlist_response = requests.post(playlist_tracks_api_endpoint, data=json.dumps(post_body), headers=headers)
+
+@discoverfy.app.route('/settings/', methods=['GET', 'POST'])
+def show_settings():
+    """Display /settings/ route."""
+    return render_template('settings.html')
