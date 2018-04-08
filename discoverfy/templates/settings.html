@@ -9,14 +9,14 @@
     <h1>Settings</h1>
     <h1>Organization Type
       <form action="" method="post" enctype="multipart/form-data">
-          <select>
+          <select name="playlist_setting">
             <option value="weekly">Weekly Playlists (saves a new playlist each week)</option>
             <option value="global">Global Playlist (saves all tracks into a single playlist)</option>
             <option value="hybrid">Hybrid (saves playlist for a configurable number of weeks, then adds to global playlist)</option>
             <option value="genre">Genrefied Playlists (global playlists classified by root genre)</option>
           </select>
           <h1>Playlist Expiration Time (Hybrid Option Only)</h1>
-          <select>
+          <select name="hybrid_setting">
             <option value="1">1</option>
             <option value="2">2</option>
             <option value="3">3</option>
