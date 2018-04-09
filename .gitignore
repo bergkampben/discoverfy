@@ -9,3 +9,5 @@ env/
 var/
 node_modules/
 bundle.js
+eecs_441_key.pem
+
