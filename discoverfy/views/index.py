@@ -287,15 +287,17 @@ def do_the_thing(playlist_data, access_token, user):
 
 @discoverfy.app.route('/settings/', methods=['GET', 'POST'])
 def show_settings():
-    if 'username' in session:
-        user_id=session['username']
-    else:
-        redirect(url_for('show_index'))
+    if 'username' not in session:
+        return redirect(url_for('show_index'))
+
+    user_id = session['username']
 
     if request.method == 'POST': #update user settings
-        print (request.form['playlist_setting'])
-        print (request.form['hybrid_setting'])
-        print (user_id)
+        new_setting = request.form['setting']
+        hybrid_week_count = 1
+
+        if new_setting in ['h2', 'h3', 'h4']:
+            hybrid_week_count = int(new_setting.split('h')[1])
 
         database = discoverfy.model.get_db()
         cursor = database.cursor()
@@ -304,7 +306,7 @@ def show_settings():
                    UPDATE users
                    SET playlist_setting = "{}", hybrid_num_weeks = {}
                    WHERE user_id = "{}"
-                   '''.format(request.form['playlist_setting'], request.form['hybrid_setting'], user_id))
+                   '''.format(new_setting, hybrid_week_count, user_id))
 
         # FOR TESTING
         cursor1 = database.cursor()
@@ -316,8 +318,6 @@ def show_settings():
 
         for i in result:
             print(i)
-
-        # END FOR TESTING
 
     """Display /settings/ route."""
     return render_template('settings.html')
