@@ -205,6 +205,8 @@ def callback():
 @discoverfy.app.route('/u/<user_id>/', methods=['GET', 'POST'])
 def show_user(user_id):
     """Display /u/<user_id> route."""
+    if request.method == 'POST': #update user settings
+        return redirect(url_for('show_settings'))
     return render_template('user.html', user=user_id)
 
 def do_the_thing(playlist_data, access_token, user):
