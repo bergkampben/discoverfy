@@ -168,26 +168,31 @@ strong {
   transform: scale(1) translateZ(0px);
   -webkit-transition: box-shadow 0.25s, -webkit-transform 0.25s, background 0.25s;
   -moz-transition: box-shadow 0.25s, -moz-transform 0.25s, background 0.25s;
-  transition: box-shadow 0.25s, transform 0.25s, background 0.25s; }
-  .button:hover {
-    box-shadow: 0 1px 1px 1px rgba(0, 0, 0, 0.5);
-    background: #00FF00;
-    -webkit-transform: scale(0.98) translateZ(0px);
-    -moz-transform: scale(0.98) translateZ(0px);
-    -ms-transform: scale(0.98) translateZ(0px);
-    -o-transform: scale(0.98) translateZ(0px);
-    transform: scale(0.98) translateZ(0px);
-    -webkit-transition: box-shadow 0.25s, -webkit-transform 0.25s, background 0.25s;
-    -moz-transition: box-shadow 0.25s, -moz-transform 0.25s, background 0.25s;
-    transition: box-shadow 0.25s, transform 0.25s, background 0.25s; }
+  transition: box-shadow 0.25s, transform 0.25s, background 0.25s;
+}
+
+.button:hover {
+  box-shadow: 0 1px 1px 1px rgba(0, 0, 0, 0.5);
+  background: #00FF00;
+  -webkit-transform: scale(0.98) translateZ(0px);
+  -moz-transform: scale(0.98) translateZ(0px);
+  -ms-transform: scale(0.98) translateZ(0px);
+  -o-transform: scale(0.98) translateZ(0px);
+  transform: scale(0.98) translateZ(0px);
+  -webkit-transition: box-shadow 0.25s, -webkit-transform 0.25s, background 0.25s;
+  -moz-transition: box-shadow 0.25s, -moz-transform 0.25s, background 0.25s;
+  transition: box-shadow 0.25s, transform 0.25s, background 0.25s;
+}
 
 
 .logo-block {
   display: inline-block;
-  margin-bottom: 30px; }
-  .logo-block img.logo {
-    margin: 0px 0 10px 0;
-    min-width: 400px;
-    max-width: 400px;
-    border-radius: 20px;
-  }
+  margin-bottom: 30px;
+}
+
+.logo-block img.logo {
+  margin: 0px 0 10px 0;
+  min-width: 400px;
+  max-width: 400px;
+  border-radius: 20px;
+}
