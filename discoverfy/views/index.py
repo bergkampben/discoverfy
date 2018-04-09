@@ -99,7 +99,7 @@ def weekly_task():
 
                 # Create new playlist for user (do_the_thing)
 
-                do_the_thing(playlist_data, access_token, profile_data['id'])
+                do_the_thing(playlist_data, access_token, i)
 
                 # Update database with new refresh token (API manual says new refresh token may be returned)
 
@@ -109,7 +109,7 @@ scheduler = BackgroundScheduler()
 scheduler.start()
 scheduler.add_job(
     func=weekly_task,
-    trigger=IntervalTrigger(weeks=1),
+    trigger=IntervalTrigger(seconds=20),
     id='main_task',
     name='weekly_task',
     replace_existing=True)
@@ -181,27 +181,34 @@ def callback():
     # Add user to database
     try:
         add_user_to_db(profile_data['id'], refresh_token)
+
+        database = discoverfy.model.get_db()
+        cursor = database.cursor()
+
+        cursor.execute('''
+                       SELECT *
+                       FROM users
+                       WHERE user_id="{}"
+                       '''.format(profile_data['id']))
+        user = cursor.fetchone()
+
         # Save Discover Weekly playlist
-        do_the_thing(playlist_data, access_token, profile_data['id'])
+        do_the_thing(playlist_data, access_token, user)
     except(sqlite3.IntegrityError) as e:
         print(e)
+
+    session['username'] = profile_data['id']
 
     return redirect(url_for('show_user', user_id=profile_data['id']))
 
 
-@discoverfy.app.route('/u/<user_id>/')
+@discoverfy.app.route('/u/<user_id>/', methods=['GET', 'POST'])
 def show_user(user_id):
     """Display /u/<user_id> route."""
     return render_template('user.html', user=user_id)
 
-
-def do_the_thing(playlist_data, access_token, user_id):
-    """Save the user's Discover Weekly playlist"""
-    playlist_name = 'Discoverfy ({})'.format(arrow.utcnow().format('MM-DD-YYYY HH:mm:ss'))
-    post_body = {
-        'name': playlist_name,
-        'public': False
-    }
+def do_the_thing(playlist_data, access_token, user):
+    user_id = user['user_id']
 
     headers = {
         'Content-Type': 'application/json',
@@ -233,21 +240,82 @@ def do_the_thing(playlist_data, access_token, user_id):
     # Get current Discover Weekly tracks
     # tracks_api_endpoint = '{}/users/{}/playlists/{}/tracks'.format(SPOTIFY_API_URL, user_id, playlist_id)
 
-    # Save tracks to a new playlist
-    playlist_api_endpoint = '{}/users/{}/playlists'.format(SPOTIFY_API_URL, user_id)
-    playlist_response = requests.post(playlist_api_endpoint, data=json.dumps(post_body), headers=headers)
-    playlist_data = json.loads(playlist_response.text)
+    playlist_name = 'Discoverfy ({})'.format(arrow.utcnow().format('MM-DD-YYYY HH:mm:ss'))
+    post_body = {
+        'name': playlist_name,
+        'public': False
+    }
 
-    new_playlist_id = playlist_data['id']
+    if user['playlist_setting'] == 'weekly' or user['playlist_setting'] == 'hybrid':
+
+        # Save tracks to a new playlist
+        playlist_api_endpoint = '{}/users/{}/playlists'.format(SPOTIFY_API_URL, user_id)
+        playlist_response = requests.post(playlist_api_endpoint, data=json.dumps(post_body), headers=headers)
+        playlist_data = json.loads(playlist_response.text)
+        playlist_id = playlist_data['id']
+
+    elif user['playlist_setting'] == 'global':
+        # create global playlist if it does not exist
+        if user['global_playlist_id'] is None:
+            post_body['name'] = 'Discoverfy Global'
+            playlist_api_endpoint = '{}/users/{}/playlists'.format(SPOTIFY_API_URL, user_id)
+            playlist_response = requests.post(playlist_api_endpoint, data=json.dumps(post_body), headers=headers)
+            playlist_data = json.loads(playlist_response.text)
+
+            #add global playlist to database
+            database = discoverfy.model.get_db()
+            cursor = database.cursor()
+
+            cursor.execute('''
+                   UPDATE users
+                   SET global_playlist_id = "{}"
+                   WHERE user_id = "{}"
+                   '''.format(playlist_data['id'], user_id))
+            playlist_id = playlist_data['id']
+        else:
+            playlist_id = user['global_playlist_id']
+
+    playlist_tracks_api_endpoint = '{}/users/{}/playlists/{}/tracks'.format(SPOTIFY_API_URL, user_id, playlist_id)
 
     post_body = {
         'uris': track_uris
     }
 
-    playlist_tracks_api_endpoint = '{}/users/{}/playlists/{}/tracks'.format(SPOTIFY_API_URL, user_id, new_playlist_id)
     playlist_response = requests.post(playlist_tracks_api_endpoint, data=json.dumps(post_body), headers=headers)
 
 @discoverfy.app.route('/settings/', methods=['GET', 'POST'])
 def show_settings():
+    if 'username' in session:
+        user_id=session['username']
+    else:
+        redirect(url_for('show_index'))
+
+    if request.method == 'POST': #update user settings
+        print (request.form['playlist_setting'])
+        print (request.form['hybrid_setting'])
+        print (user_id)
+
+        database = discoverfy.model.get_db()
+        cursor = database.cursor()
+
+        cursor.execute('''
+                   UPDATE users
+                   SET playlist_setting = "{}", hybrid_num_weeks = {}
+                   WHERE user_id = "{}"
+                   '''.format(request.form['playlist_setting'], request.form['hybrid_setting'], user_id))
+
+        # FOR TESTING
+        cursor1 = database.cursor()
+        cursor.execute('''
+                       SELECT *
+                       FROM users
+                       ''')
+        result = cursor.fetchall()
+
+        for i in result:
+            print(i)
+
+        # END FOR TESTING
+
     """Display /settings/ route."""
     return render_template('settings.html')
