@@ -31,9 +31,7 @@ API_VERSION = 'v1'
 SPOTIFY_API_URL = '{}/{}'.format(SPOTIFY_API_BASE_URL, API_VERSION)
 
 # Server-side Parameters
-CLIENT_SIDE_URL = 'http://localhost'
-PORT = 8000
-REDIRECT_URI = '{}:{}/callback'.format(CLIENT_SIDE_URL, PORT)
+REDIRECT_URI = 'http://discoverfy.co/callback'
 SCOPE = 'playlist-modify-public playlist-modify-private playlist-read-private user-top-read'
 
 auth_query_parameters = {
