@@ -28,8 +28,6 @@ case $1 in
       echo "+ sqlite3 var/discoverfy.sqlite3 < sql/schema.sql"
       sqlite3 var/discoverfy.sqlite3 < sql/data.sql
       echo "+ sqlite3 var/discoverfy.sqlite3 < sql/data.sql"
-      cp sql/uploads/* var/uploads/
-      echo "+ cp sql/uploads/* var/uploads/"
     fi
     ;;
 
@@ -47,8 +45,6 @@ case $1 in
     echo "+ sqlite3 var/discoverfy.sqlite3 < sql/schema.sql"
     sqlite3 var/discoverfy.sqlite3 < sql/data.sql
     echo "+ sqlite3 var/discoverfy.sqlite3 < sql/data.sql"
-    cp sql/uploads/* var/uploads/
-    echo "+ cp sql/uploads/* var/uploads/"
     ;;
 
     "dump")
