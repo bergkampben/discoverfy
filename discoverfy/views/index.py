@@ -248,8 +248,10 @@ def do_the_thing(playlist_data, access_token, user):
         'public': False
     }
 
+    global_playlist_id = ''
+
     # create global playlist if it does not exist
-    if (user['global_playlist_id'] is None) and (user['playlist_setting'] == 'global' or user['playlist_setting'] == 'hybrid'):
+    if (user['global_playlist_id'] is None) and (user['playlist_setting'] == 'global' or user['playlist_setting'] in ['h1', 'h2', 'h3', 'h4']):
         post_body['name'] = 'Discoverfy Global'
         playlist_api_endpoint = '{}/users/{}/playlists'.format(SPOTIFY_API_URL, user_id)
         playlist_response = requests.post(playlist_api_endpoint, data=json.dumps(post_body), headers=headers)
@@ -269,7 +271,8 @@ def do_the_thing(playlist_data, access_token, user):
     else:
         global_playlist_id = user['global_playlist_id']
 
-    if user['playlist_setting'] == 'weekly' or user['playlist_setting'] == 'hybrid':
+    playlist_id = ''
+    if user['playlist_setting'] == 'weekly' or user['playlist_setting'] in ['h1', 'h2', 'h3', 'h4']:
 
         # Save tracks to a new playlist
         playlist_api_endpoint = '{}/users/{}/playlists'.format(SPOTIFY_API_URL, user_id)
@@ -297,8 +300,7 @@ def do_the_thing(playlist_data, access_token, user):
 
     playlist_response = requests.post(playlist_tracks_api_endpoint, data=json.dumps(post_body), headers=headers)
 
-    if user['playlist_setting'] == 'hybrid':
-
+    if user['playlist_setting'] in ['h1', 'h2', 'h3', 'h4']:
         # hybrid merging
         cursor = database.cursor()
         cursor.execute('''
