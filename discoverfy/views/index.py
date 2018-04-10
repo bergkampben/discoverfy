@@ -45,59 +45,58 @@ global_count = 0
 
 def weekly_task():
     with discoverfy.app.app_context():
-        if not discoverfy.app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true": #for demo, to prevent scheduler from running twice every IntervalTrigger in debug mode
-            database = discoverfy.model.get_db()
-            cursor = database.cursor()
-            cursor.execute('''
-                       SELECT *
-                       FROM users
-                       ''')
-            result = cursor.fetchall()
+        database = discoverfy.model.get_db()
+        cursor = database.cursor()
+        cursor.execute('''
+                   SELECT *
+                   FROM users
+                   ''')
+        result = cursor.fetchall()
 
-            # Weekly work for each user
-            for i in result:
+        # Weekly work for each user
+        for i in result:
 
-                # Get new access token using refresh token
-                refresh_token = i['refresh_token']
-                code_payload = {
-                    'grant_type': 'refresh_token',
-                    'refresh_token': str(refresh_token),
-                    'redirect_uri': REDIRECT_URI,
-                    'client_id' : CLIENT_ID, # ALTERNATIVE METHOD
-                    'client_secret' : CLIENT_SECRET # ALTERNATIVE METHOD
-                }
-                headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-                post_request = requests.post(SPOTIFY_TOKEN_URL, data=code_payload, headers=headers)
+            # Get new access token using refresh token
+            refresh_token = i['refresh_token']
+            code_payload = {
+                'grant_type': 'refresh_token',
+                'refresh_token': str(refresh_token),
+                'redirect_uri': REDIRECT_URI,
+                'client_id' : CLIENT_ID, # ALTERNATIVE METHOD
+                'client_secret' : CLIENT_SECRET # ALTERNATIVE METHOD
+            }
+            headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+            post_request = requests.post(SPOTIFY_TOKEN_URL, data=code_payload, headers=headers)
 
-                #TODO If request fails due to revoked access, remove user from database
+            #TODO If request fails due to revoked access, remove user from database
 
-                # Tokens are Returned to Application
-                response_data = json.loads(post_request.text)
-                access_token = response_data['access_token']
-                # refresh_token = response_data['refresh_token']
-                # no refresh token returned, however initial refresh token should be valid until access revoked (?)
-                token_type = response_data['token_type']
-                expires_in = response_data['expires_in']
+            # Tokens are Returned to Application
+            response_data = json.loads(post_request.text)
+            access_token = response_data['access_token']
+            # refresh_token = response_data['refresh_token']
+            # no refresh token returned, however initial refresh token should be valid until access revoked (?)
+            token_type = response_data['token_type']
+            expires_in = response_data['expires_in']
 
-                # Use the access token to access Spotify API
-                authorization_header = {'Authorization':'Bearer {}'.format(access_token)}
+            # Use the access token to access Spotify API
+            authorization_header = {'Authorization':'Bearer {}'.format(access_token)}
 
-                # Get profile data
-                user_profile_api_endpoint = '{}/me/'.format(SPOTIFY_API_URL)
-                profile_response = requests.get(user_profile_api_endpoint, headers=authorization_header)
-                profile_data = json.loads(profile_response.text)
+            # Get profile data
+            user_profile_api_endpoint = '{}/me/'.format(SPOTIFY_API_URL)
+            profile_response = requests.get(user_profile_api_endpoint, headers=authorization_header)
+            profile_data = json.loads(profile_response.text)
 
-                # Get user playlist data
-                playlist_api_endpoint = '{}/playlists/'.format(profile_data['href'])
-                playlists_response = requests.get(playlist_api_endpoint, headers=authorization_header)
-                playlist_data = json.loads(playlists_response.text)
+            # Get user playlist data
+            playlist_api_endpoint = '{}/playlists/'.format(profile_data['href'])
+            playlists_response = requests.get(playlist_api_endpoint, headers=authorization_header)
+            playlist_data = json.loads(playlists_response.text)
 
 
-                # Create new playlist for user (do_the_thing)
+            # Create new playlist for user (do_the_thing)
 
-                do_the_thing(playlist_data, access_token, i)
+            do_the_thing(playlist_data, access_token, i)
 
-                # Update database with new refresh token (API manual says new refresh token may be returned)
+            # Update database with new refresh token (API manual says new refresh token may be returned)
 
 scheduler = BackgroundScheduler()
 scheduler.start()
