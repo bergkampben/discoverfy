@@ -97,8 +97,6 @@ def weekly_task():
 
                 # Update database with new refresh token (API manual says new refresh token may be returned)
 
-    print ("debug")
-
 scheduler = BackgroundScheduler()
 scheduler.start()
 scheduler.add_job(
@@ -134,7 +132,6 @@ def add_user_to_db(user_id, refresh_token):
                    VALUES("{}",
                           "{}")
                    '''.format(user_id, refresh_token))
-    print("END OF add_user_to_db")
 
 
 @discoverfy.app.route('/callback/')
@@ -270,16 +267,52 @@ def do_the_thing(playlist_data, access_token, user):
            '''.format(user_id))
 
     cursor = database.cursor()
-
-    # hybrid merging
-    if user['playlist_setting'] in ['h1', 'h2', 'h3', 'h4']:
-        cursor.execute('''
+    cursor.execute('''
                    SELECT *
                    FROM user_playlists
                    WHERE owner_id = "{}"
                    '''.format(user_id))
-        result = cursor.fetchall()
+    result = cursor.fetchall()
 
+    # merge all user playlists on change to global
+    if user['add_all_to_global'] == 1:
+        cursor = database.cursor()
+        cursor.execute('''
+                   UPDATE users
+                   SET add_all_to_global = 0
+                   WHERE user_id = "{}"
+                   '''.format(user_id))
+
+        for i in result:
+            playlist_tracks_endpoint = '{}/users/{}/playlists/{}/tracks'.format(SPOTIFY_API_URL, user_id, i['playlist_id'])
+            tracks_response = requests.get(discover_weekly_tracks_link, headers=headers)
+            tracks_data = json.loads(tracks_response.text)
+
+            track_uris = []
+            for track in tracks_data['items']:
+                track_uris.append(track['track']['uri'])
+
+            post_body = {
+                'uris': track_uris
+            }
+
+            playlist_tracks_api_endpoint = '{}/users/{}/playlists/{}/tracks'.format(SPOTIFY_API_URL, user_id, global_playlist_id)
+
+            playlist_response = requests.post(playlist_tracks_api_endpoint, data=json.dumps(post_body), headers=headers)
+
+            cursor = database.cursor()
+            cursor.execute('''
+                   DELETE FROM user_playlists
+                   WHERE playlist_id = "{}"
+                   '''.format(i['playlist_id']))
+
+            # delete old playlist from spotify
+            playlist_unfollow_playlist_endpoint = '{}/users/{}/playlists/{}/followers'.format(SPOTIFY_API_URL, user_id, i['playlist_id'])
+            unfollow_response = requests.delete(playlist_unfollow_playlist_endpoint, headers=headers)
+
+
+    # hybrid merging
+    if user['playlist_setting'] in ['h1', 'h2', 'h3', 'h4']:
         for i in result:
             if i['age_in_weeks'] >= user['hybrid_setting']:
                 playlist_tracks_endpoint = '{}/users/{}/playlists/{}/tracks'.format(SPOTIFY_API_URL, user_id, i['playlist_id'])
@@ -307,9 +340,6 @@ def do_the_thing(playlist_data, access_token, user):
                 # delete old playlist from spotify
                 playlist_unfollow_playlist_endpoint = '{}/users/{}/playlists/{}/followers'.format(SPOTIFY_API_URL, user_id, i['playlist_id'])
                 unfollow_response = requests.delete(playlist_unfollow_playlist_endpoint, headers=headers)
-                print("UNFOLLOW BEGIN")
-                print(unfollow_response)
-                print("UNFOLLOW END")
 
     # copy discover weekly according to playlist_setting
     playlist_id = ''
@@ -362,13 +392,26 @@ def show_settings():
             hybrid_week_count = int(new_setting.split('h')[1])
 
         database = discoverfy.model.get_db()
-        cursor = database.cursor()
 
+        cursor = database.cursor()
+        cursor.execute('''
+                   SELECT *
+                   FROM users
+                   WHERE user_id = "{}"
+                   '''.format(user_id))
+
+        user = cursor.fetchone()
+
+        add_all_to_global = 0
+        if new_setting == 'global' and ((user['playlist_setting'] == 'weekly') or (user['playlist_setting'] in ['h1', 'h2', 'h3', 'h4'])):
+            add_all_to_global = 1
+
+        cursor = database.cursor()
         cursor.execute('''
                    UPDATE users
-                   SET playlist_setting = "{}", hybrid_setting = {}
+                   SET playlist_setting = "{}", add_all_to_global = {}, hybrid_setting = {}
                    WHERE user_id = "{}"
-                   '''.format(new_setting, hybrid_week_count, user_id))
+                   '''.format(new_setting, add_all_to_global, hybrid_week_count, user_id))
 
     """Display /settings/ route."""
     return render_template('settings.html')
