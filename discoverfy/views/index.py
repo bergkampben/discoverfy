@@ -203,6 +203,8 @@ def callback():
 @discoverfy.app.route('/u/<user_id>/', methods=['GET', 'POST'])
 def show_user(user_id):
     """Display /u/<user_id> route."""
+    if request.method == 'POST': #update user settings
+        return redirect(url_for('show_settings'))
     return render_template('user.html', user=user_id)
 
 def do_the_thing(playlist_data, access_token, user):
@@ -238,13 +240,37 @@ def do_the_thing(playlist_data, access_token, user):
     # Get current Discover Weekly tracks
     # tracks_api_endpoint = '{}/users/{}/playlists/{}/tracks'.format(SPOTIFY_API_URL, user_id, playlist_id)
 
-    playlist_name = 'Discoverfy ({})'.format(arrow.utcnow().format('MM-DD-YYYY HH:mm:ss'))
+    playlist_name = 'Discoverfy ({})'.format(arrow.utcnow().format('MM-DD-YY'))
     post_body = {
         'name': playlist_name,
         'public': False
     }
 
-    if user['playlist_setting'] == 'weekly' or user['playlist_setting'] == 'hybrid':
+    global_playlist_id = ''
+
+    # create global playlist if it does not exist
+    if (user['global_playlist_id'] is None) and (user['playlist_setting'] == 'global' or user['playlist_setting'] in ['h1', 'h2', 'h3', 'h4']):
+        post_body['name'] = 'Discoverfy Global'
+        playlist_api_endpoint = '{}/users/{}/playlists'.format(SPOTIFY_API_URL, user_id)
+        playlist_response = requests.post(playlist_api_endpoint, data=json.dumps(post_body), headers=headers)
+        playlist_data = json.loads(playlist_response.text)
+
+        #add global playlist id to database
+        database = discoverfy.model.get_db()
+        cursor = database.cursor()
+
+        cursor.execute('''
+               UPDATE users
+               SET global_playlist_id = "{}"
+               WHERE user_id = "{}"
+               '''.format(playlist_data['id'], user_id))
+
+        global_playlist_id = playlist_data['id']
+    else:
+        global_playlist_id = user['global_playlist_id']
+
+    playlist_id = ''
+    if user['playlist_setting'] == 'weekly' or user['playlist_setting'] in ['h1', 'h2', 'h3', 'h4']:
 
         # Save tracks to a new playlist
         playlist_api_endpoint = '{}/users/{}/playlists'.format(SPOTIFY_API_URL, user_id)
@@ -252,26 +278,17 @@ def do_the_thing(playlist_data, access_token, user):
         playlist_data = json.loads(playlist_response.text)
         playlist_id = playlist_data['id']
 
+        # add new playlist to database
+        database = discoverfy.model.get_db()
+        cursor = database.cursor()
+        cursor.execute('''
+                   INSERT INTO user_playlists(playlist_id, owner_id)
+                   VALUES("{}",
+                          "{}")
+                   '''.format(playlist_id, user_id))
+
     elif user['playlist_setting'] == 'global':
-        # create global playlist if it does not exist
-        if user['global_playlist_id'] is None:
-            post_body['name'] = 'Discoverfy Global'
-            playlist_api_endpoint = '{}/users/{}/playlists'.format(SPOTIFY_API_URL, user_id)
-            playlist_response = requests.post(playlist_api_endpoint, data=json.dumps(post_body), headers=headers)
-            playlist_data = json.loads(playlist_response.text)
-
-            #add global playlist to database
-            database = discoverfy.model.get_db()
-            cursor = database.cursor()
-
-            cursor.execute('''
-                   UPDATE users
-                   SET global_playlist_id = "{}"
-                   WHERE user_id = "{}"
-                   '''.format(playlist_data['id'], user_id))
-            playlist_id = playlist_data['id']
-        else:
-            playlist_id = user['global_playlist_id']
+        playlist_id = global_playlist_id
 
     playlist_tracks_api_endpoint = '{}/users/{}/playlists/{}/tracks'.format(SPOTIFY_API_URL, user_id, playlist_id)
 
@@ -281,29 +298,73 @@ def do_the_thing(playlist_data, access_token, user):
 
     playlist_response = requests.post(playlist_tracks_api_endpoint, data=json.dumps(post_body), headers=headers)
 
+    if user['playlist_setting'] in ['h1', 'h2', 'h3', 'h4']:
+        # hybrid merging
+        cursor = database.cursor()
+        cursor.execute('''
+                       SELECT *
+                       FROM user_playlists
+                       WHERE owner_id = "{}"
+                       '''.format(user_id))
+        result = cursor.fetchall()
+
+        for i in result:
+            if i['age_in_weeks'] >= user['hybrid_setting']:
+                playlist_tracks_endpoint = '{}/users/{}/playlists/{}/tracks'.format(SPOTIFY_API_URL, user_id, i['playlist_id'])
+                tracks_response = requests.get(discover_weekly_tracks_link, headers=headers)
+                tracks_data = json.loads(tracks_response.text)
+
+                track_uris = []
+                for track in tracks_data['items']:
+                    track_uris.append(track['track']['uri'])
+
+                post_body = {
+                    'uris': track_uris
+                }
+
+                playlist_tracks_api_endpoint = '{}/users/{}/playlists/{}/tracks'.format(SPOTIFY_API_URL, user_id, global_playlist_id)
+
+                playlist_response = requests.post(playlist_tracks_api_endpoint, data=json.dumps(post_body), headers=headers)
+
+                cursor = database.cursor()
+                cursor.execute('''
+                       DELETE FROM user_playlists
+                       WHERE playlist_id = "{}"
+                       '''.format(i['playlist_id']))
+
+            else:
+                cursor = database.cursor()
+                cursor.execute('''
+                       UPDATE user_playlists
+                       SET age_in_weeks = "{}"
+                       WHERE playlist_id = "{}"
+                       '''.format(i['age_in_weeks'] + 1, i['playlist_id']))
+
 @discoverfy.app.route('/settings/', methods=['GET', 'POST'])
 def show_settings():
-    if 'username' in session:
-        user_id=session['username']
-    else:
-        redirect(url_for('show_index'))
+    if 'username' not in session:
+        return redirect(url_for('show_index'))
+
+    user_id = session['username']
 
     if request.method == 'POST': #update user settings
-        print (request.form['playlist_setting'])
-        print (request.form['hybrid_setting'])
-        print (user_id)
+        new_setting = request.form['setting']
+        hybrid_week_count = 1
+
+        if new_setting in ['h2', 'h3', 'h4']:
+            hybrid_week_count = int(new_setting.split('h')[1])
 
         database = discoverfy.model.get_db()
         cursor = database.cursor()
 
         cursor.execute('''
                    UPDATE users
-                   SET playlist_setting = "{}", hybrid_num_weeks = {}
+                   SET playlist_setting = "{}", hybrid_setting = {}
                    WHERE user_id = "{}"
-                   '''.format(request.form['playlist_setting'], request.form['hybrid_setting'], user_id))
+                   '''.format(new_setting, hybrid_week_count, user_id))
 
         # FOR TESTING
-        cursor1 = database.cursor()
+        cursor = database.cursor()
         cursor.execute('''
                        SELECT *
                        FROM users
@@ -312,8 +373,6 @@ def show_settings():
 
         for i in result:
             print(i)
-
-        # END FOR TESTING
 
     """Display /settings/ route."""
     return render_template('settings.html')

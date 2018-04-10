@@ -11,22 +11,26 @@
       <div class="wrapper top">
     <h1>Settings</h1>
     <br><br>
-      
 
-    <div class="custom-select" style="width:200px;">
-      <select>
-      <option value="weekly">Select setting:</option>
-      <option value="weekly">Weekly</option>
-      <option value="global">Global</option>
-      <option value="h1">Hybrid (1 week) </option>
-      <option value="h2">Hybrid (2 week) </option>
-      <option value="h3">Hybrid (3 week) </option>
-      <option value="h4">Hybrid (4 week) </option>
-      </select>
-  </div>
-
-    <br><br><br><input class= "button download web" type="submit" name="save-settings" value="Save"/><br>
+    <form action="" method="post">
+      <div class="custom-select" style="width:200px;">
+          <select name="setting">
+            <option value="weekly">Select setting:</option>
+            <option value="weekly">Weekly</option>
+            <option value="global">Global</option>
+            <option value="h1">Hybrid (1 week)</option>
+            <option value="h2">Hybrid (2 week)</option>
+            <option value="h3">Hybrid (3 week)</option>
+            <option value="h4">Hybrid (4 week)</option>
+          </select>
       </div>
+
+      <br><br><br>
+        <input class= "button download web" type="submit"/>
+      <br>
+    </form>
+
+    <div>
       <br><br><br>
       <h2>Setting Options Information</h2><br>
       <h4>Weekly</h4>
@@ -83,6 +87,7 @@ for (i = 0; i < x.length; i++) {
       this.classList.toggle("select-arrow-active");
     });
 }
+
 function closeAllSelect(elmnt) {
   /*a function that will close all select boxes in the document,
   except the current select box:*/
