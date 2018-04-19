@@ -102,7 +102,7 @@ scheduler = BackgroundScheduler()
 scheduler.start()
 scheduler.add_job(
     func=weekly_task,
-    trigger=IntervalTrigger(seconds=10),
+    trigger=IntervalTrigger(weeks=1),
     id='main_task',
     name='weekly_task',
     replace_existing=True)
@@ -346,12 +346,7 @@ def do_the_thing(playlist_data, access_token, user):
     playlist_id = ''
     if user['playlist_setting'] == 'weekly' or user['playlist_setting'] in ['h1', 'h2', 'h3', 'h4']:
 
-        #playlist_name = 'Discoverfy ({})'.format(arrow.utcnow().format('MM-DD-YY'))
-
-        #FOR DEMO ONLY
-        global global_count
-        playlist_name = 'Discoverfy ' + str(global_count)
-        global_count += 1
+        playlist_name = 'Discoverfy ({})'.format(arrow.utcnow().format('MM-DD-YY'))
 
         post_body = {
             'name': playlist_name,
