@@ -1,4 +1,4 @@
-# eecs-441-project
+# Discoverfy
 
 **Setting up your environment**
 
