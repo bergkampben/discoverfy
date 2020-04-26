@@ -16,7 +16,7 @@ setup(
         'nodeenv==1.2.0',
         'sh==1.12.14',
         'arrow==0.10.0',
-        'requests==2.18.4',
+        'requests==2.20.0',
         'apscheduler'
     ],
 )
